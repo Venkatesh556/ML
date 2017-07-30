@@ -1,0 +1,96 @@
+---
+title: "Practical Machine Learning - Course Project"
+author: "Venkatesh K R"
+date: "July 30, 2017"
+output: html_document
+---
+
+# Introduction
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it.
+In this project, our goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. The goal of this project is to predict the manner in which they did the exercise.
+
+# Load Libraries
+```{r libraries}
+#Libraries
+library(caret)
+library(rattle)
+library(randomForest)
+```
+
+# Loading the Data
+```{r load_the_data}
+train_data <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",na.strings=c("NA",""), header=TRUE)
+test_data <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",na.strings=c("NA",""), header=TRUE)
+dim(train_data)
+dim(test_data)
+```
+
+# Cleaning the Data
+```{r remove_NA}
+#removing NA columns
+train_data <- train_data[,colSums(is.na(train_data))==0]
+test_data <- test_data[,colSums(is.na(test_data))==0]
+dim(train_data)
+dim(test_data)
+```
+
+```{r remove_nzv}
+#removing the variables that are no variability in them
+nzv <- nearZeroVar(train_data,saveMetrics=TRUE)
+train_data <- train_data[,nzv$nzv==FALSE]
+nzv <- nearZeroVar(test_data,saveMetrics=TRUE)
+test_data <- test_data[,nzv$nzv==FALSE]
+dim(train_data)
+dim(test_data)
+```
+
+```{r remove_unwanted}
+#removing the variables that are no useful to our model
+train_data <- train_data[,-c(1:6)]
+test_data <- test_data[,-c(1:6)]
+dim(train_data)
+dim(test_data)
+```
+
+```{r Colnames}
+# displaying all columns which we will use in our model 
+colnames(train_data)
+#dim(test_data)
+```
+
+# PreProcess the Data
+```{r pca}
+train_data_pca <- preProcess(train_data[,-53],method="pca")
+train_data_pca$classe <- train_data$classe
+```
+
+# Create Validation data set from Train set
+```{r newset}
+inBuild <- createDataPartition(train_data_pca$classe,p=0.6, list=FALSE)
+training <- train_data[inBuild,]
+validation <- train_data[-inBuild,]
+dim(training)
+dim(validation)
+```
+
+# Train Model
+I believe Random Forest best suits for this classification and also it's pretty well worked for this "Course Project Prediction Quiz Portion" So directly applying Random Forest model. 
+
+```{r model_rf_train}
+model_rf <- train(classe ~ ., data = training, method = "rf")
+model_rf
+```
+
+# Cross-Validation testing
+```{r model_rf_validate}
+pred <- predict(model_rf,validation)
+cmat <- confusionMatrix(pred,validation$classe)
+cmat$table
+cmat$overall[1]
+```
+
+# Apply model on Test data
+```{r model_rf_test}
+pred_test <- predict(model_rf,test_data)
+pred_test
+```
